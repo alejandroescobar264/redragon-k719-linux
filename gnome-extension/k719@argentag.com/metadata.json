@@ -1,0 +1,13 @@
+{
+  "uuid": "k719@argentag.com",
+  "name": "Redragon K719",
+  "description": "Panel icon for the Redragon K719 Linux app (redragon-k719-linux). Left click shows the app; right click opens a menu with the audio-wave visualizer switch, start at login and quit. Only visible while the app runs.",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48"
+  ],
+  "url": "https://github.com/alejandroescobar264/redragon-k719-linux",
+  "version": 1
+}

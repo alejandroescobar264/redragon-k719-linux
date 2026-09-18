@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Application
+Name=Redragon K719
+GenericName=Keyboard Settings
+Comment=Lighting, per-key colors, key mapping, screen and audio wave for the Redragon K719
+Exec=k719-gui
+Icon=com.argentag.K719
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=redragon;keyboard;rgb;lighting;k719;
+StartupWMClass=com.argentag.K719
+Actions=toggle-audio;quit;
+
+[Desktop Action toggle-audio]
+Name=Toggle audio wave
+Exec=k719-gui --toggle-audio
+
+[Desktop Action quit]
+Name=Quit (stop background app)
+Exec=k719-gui --quit

@@ -1,0 +1,3 @@
+# Redragon K719 (Evision chipset, VID 320f) - let the logged-in user open its hidraw nodes.
+# Covers both the 2.4G receiver (320f:511c) and the keyboard on a USB cable.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="320f", TAG+="uaccess"

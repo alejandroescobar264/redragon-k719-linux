@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+"""Launcher: finds the k719 package in a source checkout, a .deb install or ~/.local."""
+import os
+import sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+for base in (os.path.dirname(here), here, "/usr/share/redragon-k719",
+             os.path.expanduser("~/.local/share/k719")):
+    if os.path.isfile(os.path.join(base, "k719", "__init__.py")):
+        sys.path.insert(0, base)
+        break
+
+from k719.gui import main  # noqa: E402
+
+sys.exit(main())
