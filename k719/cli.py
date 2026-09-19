@@ -175,6 +175,7 @@ def cmd_audio(args):
     with open_kb(args) as kb:
         run_visualizer(kb, fg=args.color, bg=args.background, rainbow=args.color is None,
                        source=args.source, fps=args.fps, style=args.style,
+                       light_delay_s=None if args.no_calibration else state.get_light_delay(kb),
                        gains={"overall": args.gain, "bass": args.bass, "mid": args.mid,
                               "treble": args.treble})
 
@@ -246,6 +247,8 @@ def main(argv=None):
     s.add_argument("--fps", type=int, default=30, help="frames per second (default 30)")
     s.add_argument("--gain", type=float, default=1.0,
                    help="overall sensitivity: bar height multiplier and beat detection (default 1)")
+    s.add_argument("--no-calibration", action="store_true",
+                   help="ignore the saved sync calibration (see the app's Audio wave tab)")
     s.add_argument("--style", choices=("spectrum", "beat", "both"), default="spectrum",
                    help="bars per frequency, whole-keyboard flash on each beat, or both")
     s.add_argument("--bass", type=float, default=1.0,

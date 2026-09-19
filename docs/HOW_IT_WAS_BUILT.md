@@ -33,6 +33,8 @@ No Redragon code or files are included in this repository.
    - a click track played while the keys flashed (end-to-end delay on the cable),
    - the user tapping along to music (which beat people actually feel),
    - tapping along to flashes through the receiver (its hidden packet queue).
+
+   That tapping method became the app's built-in **sync calibration**.
 7. **Checked the firmware.** Redragon's .NET update tools were decompiled with ILSpy. Firmware
    versions were read from the USB descriptor inside each firmware image and compared with what
    the keyboard and receiver report (see [PROTOCOL.md](PROTOCOL.md#firmware-versions)).
@@ -49,6 +51,7 @@ audio-wave effect; clock sync.
   - three styles (spectrum bars, beat flash, both),
   - bass / mid / treble sensitivity that applies live,
   - a tempo-following beat tracker, tuned against real tapping,
+  - a guided sync calibration (press Space with beeps, then with flashes),
   - it records the speaker monitor, never the microphone.
 - **Tuned for the 2.4G receiver:** only changed keys are sent, packets are paced to the radio's
   real rate, and beat flashes are fired early to hide the delay.

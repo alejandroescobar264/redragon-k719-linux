@@ -35,7 +35,7 @@
 | 🎨 **Per-key colors** | Click keys on a picture of the keyboard and paint them |
 | ⌨️ **Key remapping** | Any key to another key, a combo like `ctrl+alt+delete`, or off; one click restores the factory map |
 | 🖼️ **Screen** | Upload a picture or animated GIF (up to 80 frames) to the 240×135 display, and sync its clock with your PC |
-| 🎵 **Audio wave** | The keys react to whatever your PC plays: spectrum bars, a whole-keyboard flash on the beat, or both, with bass/mid/treble sensitivity |
+| 🎵 **Audio wave** | The keys react to whatever your PC plays: spectrum bars, a whole-keyboard flash on the beat, or both, with bass/mid/treble sensitivity and a guided sync calibration |
 | 🐉 **Panel icon** | Left-click opens the app; right-click toggles the audio wave, start at login, or quits |
 | 💻 **Command line** | `k719` does everything from a terminal or a script |
 | 📡 **Wireless-aware** | Works through the 2.4G receiver, with updates tuned to its slower radio link |
@@ -47,29 +47,28 @@ Also included: a fix for a typing lag that the keyboard's firmware causes on Lin
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/lighting.png" alt="Lighting and audio wave"><br><sub><b>Lighting</b>: effects and the audio-wave visualizer</sub></td>
-    <td width="50%"><img src="docs/screenshots/per-key-colors.png" alt="Per-key colors"><br><sub><b>Per-key colors</b>: click and paint keys</sub></td>
+    <td width="50%"><img src="docs/screenshots/lighting.png" alt="Lighting"><br><sub><b>Lighting</b>: the 20 built-in effects</sub></td>
+    <td width="50%"><img src="docs/screenshots/audio-wave.png" alt="Audio wave"><br><sub><b>Audio wave</b>: music visualizer and sync calibration</sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/screenshots/per-key-colors.png" alt="Per-key colors"><br><sub><b>Per-key colors</b>: click and paint keys</sub></td>
     <td width="50%"><img src="docs/screenshots/key-mapping.png" alt="Key mapping"><br><sub><b>Key mapping</b>: remapped keys shown in orange</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/screenshots/screen.png" alt="Screen upload"><br><sub><b>Screen</b>: pictures and GIFs for the built-in display</sub></td>
+    <td width="50%" align="center"><img src="docs/screenshots/panel-menu.png" alt="GNOME panel icon and menu"><br><sub><b>Panel icon</b>: right-click for quick controls</sub></td>
   </tr>
 </table>
-
-<p align="center">
-  <img src="docs/screenshots/panel-menu.png" alt="GNOME panel icon and menu"><br>
-  <sub><b>Panel icon</b>: right-click for quick controls; the dragon turns red while the audio wave runs</sub>
-</p>
 
 ## 📦 Install
 
 ### Option 1: `.deb` package (Ubuntu, Debian, Pop!_OS, Linux Mint)
 
-Download `redragon-k719_1.0.0_all.deb` from the
+Download `redragon-k719_1.1.0_all.deb` from the
 [Releases page](https://github.com/alejandroescobar264/redragon-k719-linux/releases), then:
 
 ```sh
-sudo apt install ./redragon-k719_1.0.0_all.deb
+sudo apt install ./redragon-k719_1.1.0_all.deb
 ```
 
 Then re-plug the keyboard or its 2.4G receiver and open **Redragon K719**.
@@ -101,9 +100,15 @@ packaging/build-deb.sh     # creates dist/redragon-k719_<version>_all.deb
   the receiver.
 - **Panel icon:** left-click opens the app; right-click has *Audio wave*, *Start at login*
   and *Quit*. Closing the window keeps the app running in the background.
-- **Audio wave:** play some music and switch it on. *Beat flash* follows the tempo
-  automatically after 3–4 seconds. It listens to your speakers' output, never the microphone.
+- **Audio wave:** play some music and switch it on in the *Audio wave* tab. *Beat flash*
+  follows the tempo automatically after 3–4 seconds. It listens to your speakers' output,
+  never the microphone.
+- **Sync calibration:** in the same tab, two one-minute rounds (press Space with beeps, then
+  with flashes) measure your setup's light delay so beat flashes land on the beat. Each round
+  is saved on its own, and the light round separately for the cable and the receiver.
 - **Screen uploads** need the USB cable.
+- **About** (the ⓘ button, or the panel menu) shows the installed version and the connected
+  device's firmware, both useful for bug reports.
 
 Or from a terminal:
 

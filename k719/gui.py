@@ -1,5 +1,6 @@
 """GTK3 front end for the Redragon K719."""
 
+import glob
 import os
 import shutil
 import sys
@@ -12,11 +13,34 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import layout, state  # noqa: E402
+from . import __version__, calibration, layout, state  # noqa: E402
 from .device import K719, K719Error  # noqa: E402
 
 SCALE = 1.35
 X0, Y0 = 59, 19
+
+REPO_URL = "https://github.com/alejandroescobar264/redragon-k719-linux"
+
+
+def connected_firmware():
+    """Firmware versions of the connected K719 devices, read from their USB descriptors
+    (the same number Redragon's updaters show), e.g. ["keyboard (USB cable), firmware 1.03"]."""
+    names = {"511b": "keyboard (USB cable)", "511c": "2.4G receiver"}
+    found = []
+    for dev in sorted(glob.glob("/sys/bus/usb/devices/*")):
+        try:
+            with open(os.path.join(dev, "idVendor")) as f:
+                if f.read().strip() != "320f":
+                    continue
+            with open(os.path.join(dev, "idProduct")) as f:
+                pid = f.read().strip()
+            with open(os.path.join(dev, "bcdDevice")) as f:
+                bcd = f.read().strip()
+        except OSError:
+            continue
+        found.append(f"{names.get(pid, 'device ' + pid)}, firmware {int(bcd[:2], 16)}.{bcd[2:]}")
+    return found
+
 
 AUTOSTART_FILE = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
@@ -176,11 +200,16 @@ class App(Gtk.ApplicationWindow):
         top.pack_start(self.status, True, True, 0)
         top.pack_start(self.autostart_check, False, False, 0)
         top.pack_start(reconnect, False, False, 0)
+        about = Gtk.Button.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
+        about.set_tooltip_text("About Redragon K719")
+        about.connect("clicked", lambda *_: self.show_about())
+        top.pack_start(about, False, False, 0)
         root.pack_start(top, False, False, 0)
 
         nb = Gtk.Notebook()
         root.pack_start(nb, True, True, 0)
         nb.append_page(self._light_page(), Gtk.Label(label="Lighting"))
+        nb.append_page(self._audio_page(), Gtk.Label(label="Audio wave"))
         nb.append_page(self._custom_page(), Gtk.Label(label="Per-key colors"))
         nb.append_page(self._keymap_page(), Gtk.Label(label="Key mapping"))
         nb.append_page(self._screen_page(), Gtk.Label(label="Screen"))
@@ -198,6 +227,30 @@ class App(Gtk.ApplicationWindow):
         app = self.get_application()
         if app:
             app.sync_autostart()
+
+    def show_about(self):
+        dialog = Gtk.AboutDialog(transient_for=self, modal=True)
+        dialog.set_program_name("Redragon K719")
+        dialog.set_version(f"Version {__version__}")
+        firmware = connected_firmware()
+        comments = ("Unofficial Linux app for the Redragon K719 keyboard: lighting effects, "
+                    "per-key colors, key remapping, pictures and GIFs on the built-in screen, "
+                    "and a music visualizer. Works over the USB cable and the 2.4G receiver.")
+        if firmware:
+            comments += "\n\nConnected: " + "; ".join(firmware)
+        dialog.set_comments(comments)
+        dialog.set_website(REPO_URL)
+        dialog.set_website_label("Project page on GitHub")
+        dialog.set_authors(["Alejandro Escobar"])
+        dialog.set_copyright("\u00a9 2026 Alejandro Escobar\n"
+                             "Not affiliated with or endorsed by Redragon.")
+        dialog.set_license_type(Gtk.License.GPL_3_0)
+        if Gtk.IconTheme.get_default().has_icon("com.argentag.K719"):
+            dialog.set_logo_icon_name("com.argentag.K719")
+        else:
+            dialog.set_logo_icon_name("input-keyboard")
+        dialog.connect("response", lambda d, _r: d.destroy())
+        dialog.present()
 
     def stop_audio_and_wait(self):
         if self.audio_stop:
@@ -262,6 +315,7 @@ class App(Gtk.ApplicationWindow):
         return light, colors, km
 
     def _apply_read(self, res):
+        self._calib_show_saved()
         light, colors, km = res
         self.custom = list(colors)
         self.keymap = list(km)
@@ -310,9 +364,14 @@ class App(Gtk.ApplicationWindow):
             g.attach(w, 1, i, 1, 1)
         g.attach(apply, 1, len(rows), 1, 1)
 
-        n = len(rows) + 1
-        g.attach(Gtk.Separator(), 0, n, 2, 1)
-        g.attach(Gtk.Label(label="Audio wave", xalign=0), 0, n + 1, 1, 1)
+        return g
+
+    # ---- audio wave ------------------------------------------------------
+
+    def _audio_page(self):
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, margin=12)
+
+        # visualizer controls
         abox = Gtk.Box(spacing=8)
         self.audio_toggle = Gtk.ToggleButton(label="Start visualizer")
         self.audio_toggle.connect("toggled", self.toggle_audio)
@@ -329,7 +388,7 @@ class App(Gtk.ApplicationWindow):
         for w in (self.audio_toggle, Gtk.Label(label="Style"), style_combo,
                   self.audio_rainbow, self.audio_color):
             abox.pack_start(w, False, True, 0)
-        g.attach(abox, 1, n + 1, 1, 1)
+        page.pack_start(abox, False, False, 0)
 
         # Sensitivity sliders multiply the bar heights; they apply live while running.
         self.audio_gains = {"overall": 1.0, "bass": 1.0, "mid": 1.0, "treble": 1.0}
@@ -351,15 +410,230 @@ class App(Gtk.ApplicationWindow):
         reset.connect("clicked", lambda *_: [
             c.set_value(1) for c in sliders.get_children() if isinstance(c, Gtk.Scale)])
         sliders.attach(reset, 2, 0, 1, 1)
-        g.attach(sliders, 1, n + 2, 1, 1)
-        g.attach(Gtk.Label(
+        page.pack_start(sliders, False, False, 0)
+        page.pack_start(Gtk.Label(
             label="Spectrum: bars per frequency (bass left, treble right). Beat flash: the "
                   "whole keyboard flashes on the beat (the tempo is followed automatically; "
                   "allow a few seconds to lock on). Style and sliders change live; "
                   "Sensitivity also affects how readily beats are found. Stopping restores "
-                  "the previous effect.", xalign=0, wrap=True),
-            1, n + 3, 1, 1)
-        return g
+                  "the previous effect.", xalign=0, wrap=True), False, False, 0)
+
+        page.pack_start(Gtk.Separator(), False, False, 0)
+        page.pack_start(self._calibration_section(), False, False, 0)
+        return page
+
+    # ---- sync calibration ------------------------------------------------
+
+    def _calibration_section(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        title = Gtk.Label(xalign=0)
+        title.set_markup("<b>Sync calibration</b>")
+        box.pack_start(title, False, False, 0)
+        box.pack_start(Gtk.Label(
+            label="Measures how late the lights appear on your setup (the 2.4G receiver is "
+                  "slower than the cable) so the beat flashes land on the beat. Two short "
+                  "rounds, each saved on its own: press Space in time with beeps (sound), "
+                  "and with flashes on the keyboard (light, per connection). Redo either one "
+                  "any time, e.g. the sound round after switching to headphones. Spectrum "
+                  "bars react to the sound, so they aren't shifted.",
+            xalign=0, wrap=True), False, False, 0)
+        self.calib_saved = Gtk.Label(xalign=0, wrap=True)
+        box.pack_start(self.calib_saved, False, False, 0)
+
+        self.calib_text = Gtk.Label(xalign=0, wrap=True)
+        self.calib_text.set_no_show_all(True)
+        box.pack_start(self.calib_text, False, False, 0)
+        self.calib_progress = Gtk.ProgressBar(show_text=True)
+        self.calib_progress.set_no_show_all(True)
+        box.pack_start(self.calib_progress, False, False, 0)
+
+        buttons = Gtk.Box(spacing=8)
+        self.calib_sound_btn = Gtk.Button(label="Sound round")
+        self.calib_sound_btn.connect("clicked", lambda *_: self._calib_prepare("sound"))
+        self.calib_light_btn = Gtk.Button(label="Light round")
+        self.calib_light_btn.connect("clicked", lambda *_: self._calib_prepare("light"))
+        self.calib_start = Gtk.Button(label="Start")
+        self.calib_start.connect("clicked", lambda *_: self._calib_run(self.calib_round))
+        self.calib_start.set_no_show_all(True)
+        self.calib_cancel = Gtk.Button(label="Cancel")
+        self.calib_cancel.connect("clicked", lambda *_: self._calib_finish("Cancelled."))
+        self.calib_cancel.set_no_show_all(True)
+        self.calib_forget = Gtk.Button(label="Reset")
+        self.calib_forget.set_tooltip_text(
+            "Forget the calibration for the current connection and use the built-in estimate")
+        self.calib_forget.connect("clicked", self._calib_forget)
+        for w in (self.calib_sound_btn, self.calib_light_btn, self.calib_start,
+                  self.calib_cancel):
+            buttons.pack_start(w, False, False, 0)
+        buttons.pack_end(self.calib_forget, False, False, 0)
+        box.pack_start(buttons, False, False, 0)
+
+        self.calib_round = None  # "sound" / "light" while preparing or running
+        self.calib_running = False
+        self.calib_presses = None
+        self.connect("key-press-event", self._calib_key)
+        GLib.idle_add(self._calib_show_saved)
+        return box
+
+    def _calib_show_saved(self):
+        if not self.kb:
+            self.calib_saved.set_text("Connect the keyboard to see its calibration.")
+            return False
+        sound, light = state.get_calibration(self.kb)
+        link = "2.4G receiver" if self.kb.wireless else "USB cable"
+        lines = [
+            "Sound round: " + ("<b>done</b>" if sound is not None else "not done yet"),
+            f"Light round ({link}): " + ("<b>done</b>" if light is not None else "not done yet"),
+        ]
+        delay = state.get_light_delay(self.kb)
+        if delay is not None:
+            lines.append(f"Light delay over the {link}: <b>{round(delay * 1000)} ms</b> "
+                         "\u2014 beat flashes are timed with it.")
+        else:
+            lines.append("Using the built-in estimate until both rounds are done.")
+        self.calib_saved.set_markup("\n".join(lines))
+        return False
+
+    def _calib_say(self, text, progress=None):
+        if not text:
+            self.calib_text.hide()
+            self.calib_progress.hide()
+            return
+        self.calib_text.set_text(text)
+        self.calib_text.show()
+        if progress is None:
+            self.calib_progress.hide()
+        else:
+            self.calib_progress.set_fraction(progress)
+            self.calib_progress.set_text(f"{round(progress * calibration.EVENTS)} / "
+                                         f"{calibration.EVENTS}")
+            self.calib_progress.show()
+
+    def _calib_buttons(self, idle):
+        """idle: round buttons shown; otherwise Start/Cancel for the chosen round."""
+        for w in (self.calib_sound_btn, self.calib_light_btn, self.calib_forget):
+            w.set_sensitive(idle)
+        self.calib_start.set_visible(not idle)
+        self.calib_start.set_sensitive(True)
+        self.calib_cancel.set_visible(not idle)
+
+    def _calib_prepare(self, which):
+        if self.kb is None:
+            self.connect_device()
+        if not self.kb:
+            self._calib_say("Connect the keyboard first.")
+            return
+        if self.audio_running():
+            self.audio_toggle.set_active(False)  # stop the visualizer, then continue
+            GLib.timeout_add(800, lambda: self._calib_prepare(which) and False)
+            return
+        if self.busy:
+            self._calib_say("The keyboard is busy - try again in a moment.")
+            return
+        self.busy = True
+        self.calib_round = which
+        self._calib_buttons(idle=False)
+        self.calib_start.set_label("Start")
+        if which == "sound":
+            self._calib_say(
+                "Sound round. Pause any music. When you press Start, 16 beeps play at a "
+                "steady beat. Press Space in time with every beep (the first three are just "
+                "to find the rhythm). Keep this window focused.")
+        else:
+            self._calib_say(
+                f"Light round. Watch the keyboard: when you press Start, the keys from "
+                f"{calibration.FLASH_KEYS} flash white 16 times, without sound. Press Space "
+                f"every time they flash (the first three are just to find the rhythm). Keep "
+                f"this window focused.")
+
+    def _calib_run(self, which):
+        self.calib_running = True
+        self.calib_stop = threading.Event()
+        self.calib_start.set_sensitive(False)
+        self.set_focus(None)  # Space must not click a button
+        self.calib_presses = calibration.Presses()
+        what = "beep" if which == "sound" else "flash"
+        self._calib_say(f"Press Space with every {what}...", 0.0)
+
+        def progress(n):
+            GLib.idle_add(self._calib_say, f"Press Space with every {what}... "
+                          f"({len(self.calib_presses)} presses)", n / calibration.EVENTS)
+
+        def worker():
+            try:
+                if which == "sound":
+                    events = calibration.sound_round(self.calib_stop, progress)
+                else:
+                    if self.kb.wireless and not self.kb.link_ok():
+                        GLib.idle_add(self._calib_say, "Keyboard asleep - press a key on it...")
+                        if not self.kb.wait_online(30):
+                            raise K719Error("keyboard not reachable through the receiver")
+                    events = calibration.light_round(self.kb, self.calib_stop, progress)
+                result, err = (events, self.calib_presses.take()), None
+            except Exception as e:  # shown to the user
+                result, err = None, e
+            GLib.idle_add(self._calib_round_done, which, result, err)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _calib_round_done(self, which, result, err):
+        self.calib_running = False
+        self.calib_presses = None
+        if self.calib_stop.is_set():  # cancelled while the round was running
+            self.busy = False
+            return
+        if err is None:
+            events, presses = result
+            try:
+                offset, spread = calibration.summarize(calibration.offsets(events, presses),
+                                                       which)
+                sound, light = state.get_calibration(self.kb)
+                sound = offset if which == "sound" else sound
+                light = offset if which == "light" else light
+                if sound is not None and light is not None:
+                    calibration.check_delay(light - sound)
+            except calibration.CalibrationError as e:
+                err = e
+        if err is not None:
+            self.calib_start.set_label("Retry")
+            self.calib_start.set_sensitive(True)
+            self._calib_say(str(err))
+            return
+        if which == "sound":
+            state.set_calibration(self.kb, sound=offset)
+        else:
+            state.set_calibration(self.kb, light=offset)
+        name = "Sound" if which == "sound" else "Light"
+        message = f"{name} round saved (your presses varied by \u00b1{round(spread * 500)} ms)."
+        if state.get_light_delay(self.kb) is None:
+            other = "light" if which == "sound" else "sound"
+            message += f" Now do the {other} round."
+        self._calib_finish(message)
+
+    def _calib_finish(self, message):
+        if getattr(self, "calib_stop", None) and self.calib_running:
+            self.calib_stop.set()  # busy is released when the running round stops
+        elif self.calib_round is not None:
+            self.busy = False
+        self.calib_round = None
+        self.calib_presses = None
+        self._calib_buttons(idle=True)
+        self._calib_say(message)
+        self._calib_show_saved()
+
+    def _calib_forget(self, *_):
+        if self.kb:
+            state.set_calibration(self.kb, forget=True)
+            self._calib_show_saved()
+            self._calib_say("Calibration removed for this connection; using the built-in "
+                            "estimate.")
+
+    def _calib_key(self, _win, event):
+        if self.calib_presses is not None and event.keyval in (Gdk.KEY_space, Gdk.KEY_KP_Space):
+            if not event.is_modifier:
+                self.calib_presses.add()
+            return True  # swallow Space during a round
+        return False
 
     def audio_running(self):
         return self.audio_stop is not None and not self.audio_stop.is_set()
@@ -403,7 +677,8 @@ class App(Gtk.ApplicationWindow):
         self._publish_audio_state(True)
         opts = dict(fg=gdk_to_rgb(self.audio_color.get_rgba()),
                     rainbow=self.audio_rainbow.get_active(),
-                    gains=self.audio_gains, style=self.audio_style, stop=self.audio_stop)
+                    gains=self.audio_gains, style=self.audio_style, stop=self.audio_stop,
+                    light_delay_s=state.get_light_delay(self.kb))
 
         def worker():
             err = None
@@ -667,6 +942,9 @@ class K719Application(Gtk.Application):
             "autostart", None, GLib.Variant.new_boolean(autostart_enabled()))
         self.autostart_action.connect("change-state", self._on_autostart_change)
         self.add_action(self.autostart_action)
+        about = Gio.SimpleAction.new("about", None)
+        about.connect("activate", lambda *_: (self.show_window(), self.window.show_about()))
+        self.add_action(about)
         quit_ = Gio.SimpleAction.new("quit", None)
         quit_.connect("activate", lambda *_: self.quit_app())
         self.add_action(quit_)

@@ -128,9 +128,12 @@ k719 audio --bass 1.5 --treble 0.7        # per-band sensitivity
 | `--bass`, `--mid`, `--treble` | per-band multipliers (<250 Hz, 250 Hz–2 kHz, >2 kHz) |
 | `--source` | PulseAudio/PipeWire source (default: the output's monitor) |
 | `--fps` | frames per second (default 30) |
+| `--no-calibration` | ignore the saved sync calibration |
 
 It listens to the speaker monitor (what the PC plays), never the microphone. When it stops,
-the previous lighting effect comes back.
+the previous lighting effect comes back. It uses the sync calibration saved from the app's
+*Audio wave* tab for the current connection (cable or receiver); without one it uses a
+built-in estimate.
 
 ## `raw`: debugging
 

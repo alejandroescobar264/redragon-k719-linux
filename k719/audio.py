@@ -331,7 +331,7 @@ class FrameSender:
 
 
 def run_visualizer(kb, fg=None, bg=(0, 0, 0), rainbow=True, source=None, fps=30, gain=1.0,
-                   stop=None, gains=None, style="spectrum"):
+                   stop=None, gains=None, style="spectrum", light_delay_s=None):
     """Run until Ctrl+C or until `stop` (a threading.Event) is set.
     Restores the previous lighting effect afterwards.
 
@@ -342,7 +342,11 @@ def run_visualizer(kb, fg=None, bg=(0, 0, 0), rainbow=True, source=None, fps=30,
     style: "spectrum" (bars per frequency), "beat" (whole keyboard flashes on each beat
     found by the tempo tracker, new colour every beat) or "both" (bars over a background that flashes on beats).
     `style` may also be a dict {"style": ...} so it can be switched while running; the
-    overall gain also sets how readily beats are detected."""
+    overall gain also sets how readily beats are detected.
+
+    light_delay_s: calibrated delay until a single-packet flash is seen (calibration.py); beat
+    flashes are fired that much earlier plus half the time a full frame takes to go out.
+    None uses a built-in estimate for the connection."""
     if gains is None:
         gains = {"overall": gain, "bass": 1.0, "mid": 1.0, "treble": 1.0}
     style_box = style if isinstance(style, dict) else {"style": style}
@@ -440,7 +444,11 @@ def run_visualizer(kb, fg=None, bg=(0, 0, 0), rainbow=True, source=None, fps=30,
             # fire early enough that the middle of the (progressively sent) flash frame lands
             # on the beat: capture delay, plus over the receiver the radio delay and half of
             # a full frame at the radio's packet rate
-            if kb.wireless:
+            if light_delay_s is not None:
+                # calibrated delay of one packet, plus half of the rest of the flash frame
+                packet = kb.RF_PACKET_S if kb.wireless else sender.per_packet
+                lead = BEAT_LEAD_S + light_delay_s + 0.5 * (full_packets - 1) * packet
+            elif kb.wireless:
                 lead = BEAT_LEAD_S + WIRELESS_BASE_S + 0.5 * full_packets * kb.RF_PACKET_S
             else:
                 lead = BEAT_LEAD_S + 0.75 * sender.per_packet * full_packets

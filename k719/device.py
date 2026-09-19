@@ -384,7 +384,9 @@ class K719:
         todo.sort(key=lambda t: (-t[0], -t[1] if bottom_first else t[1]))
         if max_packets:
             todo = todo[:max_packets]
-        todo.sort(key=lambda t: -t[1] if bottom_first else t[1])
+        # changed keys go out first (in row order), routine refreshes only after them, so a
+        # refresh never delays something the user should see now
+        todo.sort(key=lambda t: (t[0] == 0.5, -t[1] if bottom_first else t[1]))
         for _change, off, idx in todo:
             if self.wireless:
                 wait = getattr(self, "_next_send", 0.0) - time.monotonic()
@@ -396,6 +398,20 @@ class K719:
             self._direct_shown[off:off + len(seg)] = seg
             self._direct_sent_at[idx] = time.monotonic()
         return len(todo)
+
+    def send_direct_packet(self, first_slot, colors):
+        """Send one packet of direct colors starting at `first_slot` (for timing tests).
+        Returns the time it was handed to the device. Over the receiver it is paced like
+        set_direct_colors so it never queues behind earlier packets."""
+        data = b"".join(bytes(c) for c in colors)[:self.chunk]
+        if self.wireless:
+            wait = getattr(self, "_next_send", 0.0) - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+        sent_at = time.monotonic()
+        self.transfer(CMD_DIRECT_COLORS, len(data), first_slot * 3, data, timeout=0.5)
+        self._next_send = time.monotonic() + self.RF_PACKET_S
+        return sent_at
 
     # ---- key mapping -----------------------------------------------------
 

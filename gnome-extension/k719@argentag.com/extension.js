@@ -1,7 +1,7 @@
 // Panel icon for redragon-k719-linux (k719-gui). SPDX-License-Identifier: GPL-3.0-or-later
 // The icon is only shown while the app is running (it appears when the app starts and
 // disappears when it quits). Left click: show the app window.
-// Right click: menu (show app, audio wave on/off, start at login on/off, quit).
+// Right click: menu (show app, audio wave on/off, start at login on/off, about, quit).
 // The app is a GtkApplication (com.argentag.K719) whose actions are exported on D-Bus;
 // this indicator calls them and follows the "audio" action's state for its icon.
 
@@ -108,6 +108,10 @@ class K719Indicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._autostartItem);
 
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+        this._aboutItem = new PopupMenu.PopupMenuItem('About');
+        this._aboutItem.connect('activate', () => this._actions?.activate_action('about', null));
+        this.menu.addMenuItem(this._aboutItem);
 
         this._quitItem = new PopupMenu.PopupMenuItem('Quit');
         this._quitItem.connect('activate', () => this._actions?.activate_action('quit', null));

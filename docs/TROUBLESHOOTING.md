@@ -79,14 +79,31 @@ The visualizer records the speaker **monitor** (a copy of what the PC plays), ne
 microphone, but GNOME's privacy indicator counts any recording stream. You can confirm what
 is recorded with `pactl list source-outputs`: the source is a `.monitor` of your speakers.
 
-## Audio wave lags over the 2.4G receiver
+## Audio wave is out of sync with the beat
 
-The receiver can only deliver about 90 small packets per second to the keyboard, so the app
-sends only the keys that changed and fires beat flashes early. *Beat flash* is the most
-accurate style over wireless; the spectrum bars can't be predicted, so they stay slightly
-behind. On the cable, all styles are in sync.
+Run the **Sync calibration** in the *Audio wave* tab:
+- **Sound round:** press Space with 16 beeps (pause your music first).
+- **Light round:** press Space when the keys from Caps Lock to J flash.
+
+Beat flashes are then fired early by the measured delay. Each round is saved separately, so
+you can redo just one: the sound round after changing speakers or headphones, or the light
+round for the other connection (it's stored separately for the cable and the receiver).
+**Reset** removes the calibration for the current connection.
+
+Over the 2.4G receiver, the keyboard can only receive about 90 small packets per second, so
+the app sends only the keys that changed. *Beat flash* is the most accurate style over
+wireless. The spectrum bars simply react to the sound, so they can't be shifted and stay
+slightly behind. On the cable all styles are in sync.
+
+## Calibration says it couldn't hear the beeps
+
+The sound round listens to the speaker output. Pause other audio, make sure the output isn't
+muted, and check that the default output is the device you're listening on.
 
 ## Collecting details for a bug report
+
+The app's **About** window (the ⓘ button) shows the installed version and the connected
+device's firmware. From a terminal:
 
 ```sh
 k719 --version
